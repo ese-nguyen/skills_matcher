@@ -1,0 +1,52 @@
+[
+  {
+    "_id": 0,
+    "skillId": "AI",
+    "superSkillId": [
+      "Artificial Intelligence (AI)",
+      "Generative AI",
+      "API"
+    ]
+  },
+  {
+    "_id": 1,
+    "skillId": "Machine learning",
+    "superSkillId": [
+      "Machine Learning"
+    ]
+  },
+  {
+    "_id": 2,
+    "skillId": "TSNE",
+    "superSkillId": [
+      "TFS",
+      "Tortoise SVN",
+      "Tcl-Tk"
+    ]
+  },
+  {
+    "_id": 3,
+    "skillId": "data analysis",
+    "superSkillId": [
+      "Data Analysis"
+    ]
+  },
+  {
+    "_id": 4,
+    "skillId": "privacy law",
+    "superSkillId": [
+      "Data Privacy",
+      "Law",
+      "Corporate Law"
+    ]
+  },
+  {
+    "_id": 5,
+    "skillId": "unknown skill",
+    "superSkillId": [
+      "Culinary Skills",
+      "Creative Skills",
+      "Research Skills"
+    ]
+  }
+]
