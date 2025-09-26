@@ -49,6 +49,9 @@
 - SetFit and semantic embedding models (sentence-transformers/model2vec) offer a strong balance: fast, scalable, and accurate for skill matching, especially with multilingual support.
 - For production, distilled models like `minishlab/potion-multilingual-128M` deliver efficient, multilingual accuracy.
 
+**Chosen Trade-off:**
+We have selected semantic embedding models (specifically sentence-transformers/model2vec) as our solution. This choice balances speed, accuracy, and scalability for the skill matching task. While LLMs provide the highest accuracy for complex language, their latency and cost are prohibitive for production-scale matching. Regex/fuzzy matching is extremely fast but fails to capture semantic meaning, making it unsuitable for our use case. SetFit models require labeled data, which we do not have. Semantic embedding models, especially distilled multilingual variants, offer high semantic accuracy, reasonable speed, and scalability for large skill databases and multilingual inputs. This trade-off ensures robust matching performance without excessive computational or operational overhead.
+
 6. **Solution Journey**
 
 Semantic embedding models excel with sentences, but inputs are often single words or short phrases. To improve results:
