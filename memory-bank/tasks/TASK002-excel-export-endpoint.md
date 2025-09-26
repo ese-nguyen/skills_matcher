@@ -8,15 +8,8 @@
 Add endpoint to export 600 mapped skills to Excel with columns: _id, skill_raw, skill_super (Array).
 
 ## Thought Process
-- Use pandas to generate Excel
-- Query mappings from DB
-- Format output as required
 
 ## Implementation Plan
-- Add export endpoint to API
-- Query 600 mapped samples
-- Format DataFrame and export to Excel
-- Return file for download
 
 ## Progress Tracking
 **Overall Status:** In Progress - 10%
@@ -32,5 +25,11 @@ Add endpoint to export 600 mapped skills to Excel with columns: _id, skill_raw, 
 
 ## Progress Log
 ### 2025-09-25
-- Started Excel export endpoint
-- Added export endpoint subtask
+## Updated Requirements (2025-09-26)
+Endpoint must accept Excel/CSV file upload and return the same file with an additional column for mapped skills.
+
+## Updated Implementation Plan
+- Accept Excel/CSV file upload
+- Map skills for each row using matcher
+- Add new column with mapped skills
+- Return modified file in same format (Excel/CSV)

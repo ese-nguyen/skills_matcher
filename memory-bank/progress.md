@@ -1,14 +1,8 @@
 # Progress
-
-## Completed
-- Skill extraction utility
-- Embedding and matching logic
-- FastAPI endpoints for mapping (list, file upload)
 - Config centralization
-- Similarity threshold logic
-
-## In Progress
-- MongoDB integration
+## In Progress (2025-09-26)
+- Excel/CSV export endpoint: input file returns same file with mapped skills column
+- Dockerization with multi-stage build, uv install, .venv, and fallback for missing lock file
 - Error handling and validation
 - Dockerization
 - GCP deployment
