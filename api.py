@@ -1,4 +1,3 @@
-
 from fastapi import FastAPI, UploadFile, File, Body
 from fastapi.responses import JSONResponse, StreamingResponse
 from typing import List, Dict, Any
@@ -75,6 +74,7 @@ def match_skills_file(file: UploadFile = File(...)):
         output.seek(0)
         return StreamingResponse(output, media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", headers={"Content-Disposition": "attachment; filename=mapped_skills.xlsx"})
 
+
 # REST API for upserting skill-superSkill mappings
 @app.post("/mappings")
 def upsert_mapping(payload: Dict[str, Any] = Body(...)):
@@ -86,7 +86,6 @@ def upsert_mapping(payload: Dict[str, Any] = Body(...)):
     skill_input = payload.get("skillId")
     super_skill_ids = payload.get("superSkillId")
 
-    # Helper to extract skill value
     def extract_skill_value(item):
         if isinstance(item, str):
             return item
@@ -94,11 +93,9 @@ def upsert_mapping(payload: Dict[str, Any] = Body(...)):
             return item.get("value")
         return None
 
-    # Normalize skillId: case, space, punctuation insensitive
     def normalize_skill(s):
         return re.sub(r"[\s\W]+", "", s).lower() if s else ""
 
-    # Build list of skill values
     if isinstance(skill_input, str):
         skill_values = [skill_input]
     elif isinstance(skill_input, dict):
@@ -112,7 +109,6 @@ def upsert_mapping(payload: Dict[str, Any] = Body(...)):
     if not skill_values:
         return JSONResponse(content={"error": "No valid skill values found in skillId."}, status_code=400)
 
-    # Check for duplicate (conflict)
     for val in skill_values:
         norm_val = normalize_skill(val)
         for existing in MAPPINGS:
@@ -120,9 +116,7 @@ def upsert_mapping(payload: Dict[str, Any] = Body(...)):
                 return JSONResponse(content={"error": f"Duplicate skill (normalized): {val}"}, status_code=409)
 
     model = app.state.model
-    # If superSkillId is provided, embed and match against it
     if super_skill_ids is not None:
-        # Support both flat list and dict-of-objects list
         def flatten_superskill_list(lst):
             flat = []
             for item in lst:
@@ -134,27 +128,116 @@ def upsert_mapping(payload: Dict[str, Any] = Body(...)):
 
         custom_super_skills = flatten_superskill_list(super_skill_ids)
         custom_values = [ss["value"] for ss in custom_super_skills if "value" in ss]
-        # Embed custom super-skills
         import torch
         custom_embeddings = model.encode(custom_values, convert_to_tensor=True)
         result = []
         for skill in skill_values:
             skill_emb = model.encode([skill], convert_to_tensor=True)
             similarities = torch.nn.functional.cosine_similarity(custom_embeddings, skill_emb)
-            # Get top matches (all above threshold or top 1)
             threshold = 0.4
             top_indices = (similarities > threshold).nonzero(as_tuple=True)[0].tolist()
             if not top_indices:
-                # fallback to best match
                 top_indices = [int(torch.argmax(similarities).item())]
             matched = [custom_super_skills[i] for i in top_indices]
             result.append({"skillId": skill, "superSkillId": matched})
             MAPPINGS[skill] = matched
     else:
-        # Use matcher for each skill against default database
         match_result = match_skills(skill_values, model)
         result = [{"skillId": r["skillId"], "superSkillId": r.get("superSkillId", [])} for r in match_result]
         for r in match_result:
             MAPPINGS[r["skillId"]] = r.get("superSkillId", [])
 
     return JSONResponse(content={"results": result})
+
+# New endpoint: /mappings-file
+@app.post("/mappings-to-file")
+def upsert_mapping_file(payload: Dict[str, Any] = Body(...), file_type: str = Body("csv")):
+    """
+    Accepts same input as /mappings, returns a file (CSV or XLSX) with mapping results.
+    """
+    import re
+    import io
+    import pandas as pd
+
+    skill_input = payload.get("skillId")
+    super_skill_ids = payload.get("superSkillId")
+
+    def extract_skill_value(item):
+        if isinstance(item, str):
+            return item
+        if isinstance(item, dict):
+            return item.get("value")
+        return None
+
+    def normalize_skill(s):
+        return re.sub(r"[\s\W]+", "", s).lower() if s else ""
+
+    if isinstance(skill_input, str):
+        skill_values = [skill_input]
+    elif isinstance(skill_input, dict):
+        val = extract_skill_value(skill_input)
+        skill_values = [val] if val else []
+    elif isinstance(skill_input, list):
+        skill_values = [extract_skill_value(item) for item in skill_input if extract_skill_value(item)]
+    else:
+        return JSONResponse(content={"error": "Invalid payload: skillId must be string, dict, or list."}, status_code=400)
+
+    if not skill_values:
+        return JSONResponse(content={"error": "No valid skill values found in skillId."}, status_code=400)
+
+    for val in skill_values:
+        norm_val = normalize_skill(val)
+        for existing in MAPPINGS:
+            if normalize_skill(existing) == norm_val:
+                return JSONResponse(content={"error": f"Duplicate skill (normalized): {val}"}, status_code=409)
+
+    model = app.state.model
+    if super_skill_ids is not None:
+        def flatten_superskill_list(lst):
+            flat = []
+            for item in lst:
+                if isinstance(item, dict) and all(isinstance(v, dict) for v in item.values()):
+                    flat.extend(list(item.values()))
+                elif isinstance(item, dict) and "value" in item:
+                    flat.append(item)
+            return flat
+
+        custom_super_skills = flatten_superskill_list(super_skill_ids)
+        custom_values = [ss["value"] for ss in custom_super_skills if "value" in ss]
+        import torch
+        custom_embeddings = model.encode(custom_values, convert_to_tensor=True)
+        result = []
+        for skill in skill_values:
+            skill_emb = model.encode([skill], convert_to_tensor=True)
+            similarities = torch.nn.functional.cosine_similarity(custom_embeddings, skill_emb)
+            threshold = 0.4
+            top_indices = (similarities > threshold).nonzero(as_tuple=True)[0].tolist()
+            if not top_indices:
+                top_indices = [int(torch.argmax(similarities).item())]
+            matched = [custom_super_skills[i] for i in top_indices]
+            result.append({"skillId": skill, "superSkillId": matched})
+            MAPPINGS[skill] = matched
+    else:
+        match_result = match_skills(skill_values, model)
+        result = [{"skillId": r["skillId"], "superSkillId": r.get("superSkillId", [])} for r in match_result]
+        for r in match_result:
+            MAPPINGS[r["skillId"]] = r.get("superSkillId", [])
+
+    # Prepare output DataFrame
+    out_df = pd.DataFrame({
+        "_id": range(1, len(skill_values) + 1),
+        "skill_raw": skill_values,
+        "skill_super": [r["superSkillId"] for r in result]
+    })
+
+    output = io.BytesIO()
+    if file_type == "csv":
+        out_df.to_csv(output, index=False)
+        output.seek(0)
+        return StreamingResponse(output, media_type="text/csv", headers={"Content-Disposition": "attachment; filename=mapped_skills.csv"})
+    elif file_type == "xlsx":
+        out_df.to_excel(output, index=False)
+        output.seek(0)
+        return StreamingResponse(output, media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", headers={"Content-Disposition": "attachment; filename=mapped_skills.xlsx"})
+    else:
+        return JSONResponse(content={"error": "Unsupported file_type. Use 'csv' or 'xlsx'."}, status_code=400)

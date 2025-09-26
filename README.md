@@ -36,12 +36,88 @@ This project provides a skill matching API using FastAPI, GCP, sentence-transfor
 - `data/database/metadata_superSkill.json`: Source database
 - `pyproject.toml`: Dependency management
 
-## Example Usage
-```python
-from src.utils.extract_skills import extract_skills_from_superskill_db
-skills = extract_skills_from_superskill_db("./data/database/metadata_superSkill.json")
-# Use matcher to match raw skills to standardized skills
+
+## API Endpoints & Usage
+
+### `/match-skills`
+**POST**: Match a list of raw skills to standardized super skills.
+**Payload:**
+```json
+{
+	"skills": ["python", "aws", "sql"]
+}
 ```
+**Response:**
+```json
+{
+	"results": [
+		{"_id": 0, "skillId": "python", "superSkillId": [{"elId": ..., "value": ...}]},
+		...
+	]
+}
+```
+
+### `/match-skills-file`
+**POST**: Upload Excel/CSV file, returns same file with mapped skills column.
+**File:** `.csv` or `.xlsx` (skills in first column)
+**Response:** Downloadable file with columns: `_id`, `skill_raw`, `skill_super` (array)
+
+
+### `/mappings`
+**POST**: Flexible skill-to-super-skill matching for user data.
+**Payload:**
+Supports:
+- Single skill string: `{ "skillId": "python" }`
+- Skill object: `{ "skillId": {"id": 12, "value": "python"} }`
+- List of skill strings: `{ "skillId": ["python", "sql"] }`
+- List of skill objects: `{ "skillId": [{"id": 12, "value": "python"}, {"id": 13, "value": "SQL"}] }`
+- Custom super-skills: `superSkillId` as flat list or dict-of-objects list
+
+**Custom superSkillId examples:**
+```json
+"superSkillId": [
+	{"elId": 123, "value": "Python"},
+	{"elId": 456, "value": "AWS"}
+]
+```
+or
+```json
+"superSkillId": [
+	{"1": {"elId": 1, "value": "3D", "frequency": 1}, "2": {"elId": 2, "value": "Bluetooth", "frequency": 46}}
+]
+```
+
+**Response:**
+```json
+{
+	"results": [
+		{"skillId": "python", "superSkillId": [{"elId": ..., "value": ...}]},
+		...
+	]
+}
+```
+
+### `/mappings-to-file`
+**POST**: Flexible skill-to-super-skill matching for user data, returns a downloadable file (CSV or XLSX) with mapping results.
+**Payload:**
+Same as `/mappings`, plus optional `file_type` ("csv" or "xlsx", default: "csv"):
+```json
+{
+	"skillId": ["python", "sql"],
+	"superSkillId": [
+		{"elId": 123, "value": "Python"},
+		{"elId": 456, "value": "AWS"}
+	],
+	"file_type": "csv"
+}
+```
+**Response:**
+Downloadable file with columns:
+- `_id`: Row index
+- `skill_raw`: Input skill value
+- `skill_super`: Array of matched super skills
+
+File format matches `/match-skills-file` output. Set `file_type` to "xlsx" for Excel output.
 
 ## Integration Points
 - FastAPI, sentence-transformers, model2vec, torch, torchvision
