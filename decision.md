@@ -22,7 +22,8 @@
                 - E.g.
                     ```
                     class SkillSchema(BaseModel):
-                    skills: Literal["Python", "SQL"]```
+                        skills: Literal["Python", "SQL"]
+                    ```
             - High computational cost, latency, requires prompt engineering, may need input filtering.
         - **Regex / Fuzzy Matching:**
             - Fast, lightweight, simple for exact/near matches.
