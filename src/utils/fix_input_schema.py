@@ -1,8 +1,11 @@
 from google import genai
 from pydantic import BaseModel
+import os
 from dotenv import load_dotenv
 
-load_dotenv()  # Load environment variables from .env file
+# Only load .env if not running in production
+if os.environ.get("ENV", "dev").lower() != "prod":
+    load_dotenv()
 
 class Skill(BaseModel):
     skill: str
